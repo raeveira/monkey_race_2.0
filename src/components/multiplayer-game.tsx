@@ -127,9 +127,6 @@ export function MultiplayerGame({ players, currentPlayer, socket }: MultiplayerG
 
     // Calculate monkey position on screen based on absolute position
     const getMonkeyScreenPosition = (position: number) => {
-        // Calculate which section of the background we're in
-        const currentSection = Math.floor(position / SECTION_HEIGHT)
-
         // Calculate position within the current section
         const positionInSection = position % SECTION_HEIGHT
 
