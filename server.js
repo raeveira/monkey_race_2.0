@@ -16,6 +16,10 @@ const games = {}
 // Store player session info
 const playerSessions = {}
 
+// Constants
+const MAX_HEIGHT = 2000 // Maximum climbing height
+const BONUS_TIME_LIMIT = 30 // Time limit in seconds to get bonus points for reaching the top
+
 // Create a new game or get existing one for quick play
 const getOrCreateGame = () => {
     // Find an existing game in lobby state that is NOT private
@@ -35,6 +39,8 @@ const getOrCreateGame = () => {
         status: "lobby",
         isPrivate: false,
         maxPlayers: 10,
+        topReachers: [], // Track players who reached the top in order
+        gameStartTime: 0, // When the game started (for time-based bonuses)
     }
 
     games[gameId] = newGame
@@ -50,6 +56,8 @@ const createPrivateGame = (maxPlayers = 30) => {
         status: "lobby",
         isPrivate: true,
         maxPlayers: maxPlayers,
+        topReachers: [], // Track players who reached the top in order
+        gameStartTime: 0, // When the game started (for time-based bonuses)
     }
 
     games[gameId] = newGame
@@ -410,6 +418,9 @@ app.prepare().then(() => {
 
             console.log(`Starting game ${gameId} with ${game.players.length} players`)
 
+            // Record game start time for bonus calculations
+            game.gameStartTime = Date.now()
+
             // Start countdown
             let countdown = 3
             const countdownInterval = setInterval(() => {
@@ -428,7 +439,7 @@ app.prepare().then(() => {
         })
 
         // Submit answer
-        socket.on("submitAnswer", ({ playerId, isCorrect, score }) => {
+        socket.on("submitAnswer", ({ playerId, isCorrect, score, climbAmount, reachedMax }) => {
             // Find player's game
             const game = Object.values(games).find((g) => g.players.some((p) => p.id === playerId))
 
@@ -438,23 +449,91 @@ app.prepare().then(() => {
             const player = game.players.find((p) => p.id === playerId)
             if (player) {
                 if (isCorrect) {
+                    // Add score
                     player.score += score
-                    player.position += 50 // Move up
+
+                    // Only increase position if not at max height
+                    if (!reachedMax && player.position < MAX_HEIGHT) {
+                        player.position += climbAmount // Move up by specified amount
+                        // Cap at max height
+                        if (player.position > MAX_HEIGHT) {
+                            player.position = MAX_HEIGHT
+                        }
+                    }
+
                     console.log(`Player ${player.name} answered correctly. Score: ${player.score}, Position: ${player.position}`)
                 } else {
-                    player.position = Math.max(0, player.position - 20) // Move down but not below 0
+                    // Decrease score (but not below 0)
+                    player.score = Math.max(0, player.score + score)
+
+                    // Only decrease position if not at max height
+                    if (!reachedMax) {
+                        player.position = Math.max(0, player.position + climbAmount) // Move down but not below 0
+                    }
                     console.log(`Player ${player.name} answered incorrectly. Position: ${player.position}`)
                 }
 
                 // Broadcast updated players
                 io.to(game.id).emit("playerUpdate", game.players)
+            }
+        })
 
-                // Check if any player reached the finish line
-                if (player.position >= 500) {
-                    game.status = "finished"
-                    console.log(`Game ${game.id} finished. Winner: ${player.name}`)
-                    io.to(game.id).emit("gameOver", game.players)
+        // Player reached the top
+        socket.on("playerReachedTop", ({ playerId, playerName, timeLeft, withinTimeLimit }) => {
+            // Find player's game
+            const game = Object.values(games).find((g) => g.players.some((p) => p.id === playerId))
+
+            if (!game) return
+
+            // Check if player is already in the top reachers list
+            if (game.topReachers.includes(playerId)) return
+
+            // Add player to top reachers list
+            game.topReachers.push(playerId)
+
+            console.log(`Player ${playerName} reached the top! Position: ${game.topReachers.length}`)
+
+            // Award bonus points based on position
+            const player = game.players.find((p) => p.id === playerId)
+            if (player) {
+                let bonusPoints = 0
+
+                // Only award bonus points if player reached top within time limit
+                if (withinTimeLimit) {
+                    // Award bonus points based on position (1st, 2nd, 3rd)
+                    switch (game.topReachers.length) {
+                        case 1:
+                            bonusPoints = 100
+                            break
+                        case 2:
+                            bonusPoints = 50
+                            break
+                        case 3:
+                            bonusPoints = 25
+                            break
+                        default:
+                            bonusPoints = 0
+                    }
+
+                    // Add bonus points to player's score
+                    if (bonusPoints > 0) {
+                        player.score += bonusPoints
+                        console.log(`Awarded ${bonusPoints} bonus points to ${playerName} for reaching top within time limit`)
+                    }
+                } else {
+                    console.log(`${playerName} reached top but exceeded time limit for bonus`)
                 }
+
+                // Broadcast updated players
+                io.to(game.id).emit("playerUpdate", game.players)
+
+                // Notify all players about the new top reacher
+                io.to(game.id).emit("topReachersUpdate", {
+                    reachers: game.topReachers,
+                    newReacher: playerName,
+                    position: game.topReachers.length,
+                    bonusAwarded: withinTimeLimit,
+                })
             }
         })
 
@@ -467,6 +546,9 @@ app.prepare().then(() => {
 
             // Reset game
             game.status = "lobby"
+            game.topReachers = []
+            game.gameStartTime = 0
+
             game.players.forEach((p) => {
                 p.score = 0
                 p.position = 0
