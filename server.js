@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid"
 const dev = process.env.NODE_ENV !== "production"
 const turbo = process.env.NODE_ENV !== "production"
 const hostname = "localhost"
-const port = 3000
+const port = process.env.NODE_ENV === "production" ? 3000 : 80
 const app = next({ dev, hostname, port, turbo })
 const handler = app.getRequestHandler()
 
