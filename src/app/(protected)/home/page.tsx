@@ -16,8 +16,10 @@ export default function HomePage() {
             const localVolume = localStorage.getItem("volume")
             const localMuted = localStorage.getItem("isMuted")
 
-            const initialVolume = localVolume ? Number.parseFloat(localVolume) : 0.5
-            const initialMuted = localMuted === "true"
+            const initialVolume = localVolume && !isNaN(Number(localVolume))
+                ? Math.min(Math.max(Number.parseFloat(localVolume), 0), 1)
+                : 0.5;
+            const initialMuted = localMuted === "true";
 
             setVolume(initialVolume)
             setIsMuted(initialMuted)
@@ -32,7 +34,7 @@ export default function HomePage() {
     }, [])
 
     const handleVolumeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const newVolume = Number(event.target.value)
+        const newVolume = Math.min(Math.max(Number(event.target.value), 0), 1);
         if (audioRef.current) {
             audioRef.current.volume = newVolume
             setVolume(newVolume)

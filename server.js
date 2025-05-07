@@ -18,7 +18,6 @@ const playerSessions = {}
 
 // Constants
 const MAX_HEIGHT = 2000 // Maximum climbing height
-const BONUS_TIME_LIMIT = 30 // Time limit in seconds to get bonus points for reaching the top
 
 // Create a new game or get existing one for quick play
 const getOrCreateGame = () => {
@@ -140,9 +139,9 @@ app.prepare().then(() => {
         })
 
         // Chat functionality
-        socket.on("message", (message) => {
-            console.log("Received message: ", message)
-            socket.broadcast.emit("message", message)
+        socket.on("clientMessage", ({message, lobbyId}) => {
+            console.log(`Message received in lobby ${lobbyId}: ${message}`);
+            io.to(lobbyId).emit("message", message);
         })
 
         // Check if a game exists and is joinable
@@ -479,7 +478,7 @@ app.prepare().then(() => {
         })
 
         // Player reached the top
-        socket.on("playerReachedTop", ({ playerId, playerName, timeLeft, withinTimeLimit }) => {
+        socket.on("playerReachedTop", ({ playerId, playerName, withinTimeLimit }) => {
             // Find player's game
             const game = Object.values(games).find((g) => g.players.some((p) => p.id === playerId))
 

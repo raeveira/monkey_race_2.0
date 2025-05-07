@@ -17,9 +17,10 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
-export const Chat = () => {
+export const Chat = ({lobbyId}: {lobbyId: string}) => {
     const [socket, setSocket] = React.useState<typeof socketIo | null>(null)
     const [messages, setMessages] = React.useState<string[]>([])
+    const messagesEndRef = React.useRef<HTMLDivElement | null>(null)
 
     // Define form
     const form = useForm<FormValues>({
@@ -29,34 +30,39 @@ export const Chat = () => {
         },
     })
 
-    React.useEffect(() => {
+    const createSocket = () => {
         const newSocket = socketIo
         setSocket(newSocket)
 
+        newSocket.off("message");
+        newSocket.on("message", (message: string) => {
+            setMessages((prevMessages) => [...prevMessages, message])
+        })
+    }
+
+    React.useEffect(() => {
+        createSocket()
         return () => {
-            newSocket.close()
+            if (socket) {
+                socket.disconnect()
+            }
         }
     }, [])
 
-    React.useEffect(() => {
-        if (!socket) return
-
-        socket.on("message", (message: string) => {
-            setMessages((prevMessages) => [...prevMessages, message])
-        })
-
-        return () => {
-            socket.off("message")
-        }
-    }, [socket])
-
     const onSubmit = (data: FormValues) => {
         if (socket && data.message.trim()) {
-            socket.emit("message", data.message)
-            setMessages((prevMessages) => [...prevMessages, data.message])
+            socket.emit("clientMessage", {message: data.message, lobbyId: lobbyId})
             form.reset({ message: "" })
         }
     }
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+
+    React.useLayoutEffect(() => {
+        scrollToBottom();
+    }, [messages]);
 
     if (!socket) {
         return null
@@ -71,6 +77,7 @@ export const Chat = () => {
                         {msg}
                     </div>
                 ))}
+                <div ref={messagesEndRef} />
             </div>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center justify-center space-x-2">

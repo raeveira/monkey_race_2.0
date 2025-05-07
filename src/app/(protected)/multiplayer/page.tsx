@@ -373,7 +373,7 @@ export default function MultiplayerPage() {
             </div>
 
             {/* Chat component */}
-            {showChat && <Chat />}
+            {showChat && <Chat lobbyId={gameId} />}
         </div>
     )
 }
