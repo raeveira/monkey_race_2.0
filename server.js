@@ -115,7 +115,6 @@ app.prepare().then(() => {
     const httpServer = createServer(handler)
 
     const io = new Server(httpServer, {
-        transports: ["polling", "websocket"],
         cors: {
             origin: ["https://math.raeveira.nl", "http://localhost:3000"],
             methods: ["GET", "POST"],
