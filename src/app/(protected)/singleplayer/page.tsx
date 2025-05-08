@@ -36,7 +36,7 @@ type FormValues = z.infer<typeof formSchema>
 const MONKEY_CLIMB_SPEED = 100 // How much the monkey moves up on correct answer
 const MONKEY_FALL_SPEED = 50 // How much the monkey moves down on incorrect answer
 const MAX_HEIGHT = 2000 // Maximum climbing height in pixels
-const BONUS_TIME_LIMIT = 30 // Time limit in seconds to get bonus points for reaching the top
+const BONUS_TIME_LIMIT = 40 // Time limit in seconds to get bonus points for reaching the top
 
 export default function SingleplayerPage() {
     const [score, setScore] = useState(0)
