@@ -36,7 +36,7 @@ const MONKEY_CLIMB_SPEED = 100 // How much the monkey moves up on correct answer
 const MONKEY_FALL_SPEED = 50 // How much the monkey moves down on incorrect answer
 const MAX_HEIGHT = 2000 // Maximum climbing height in pixels
 const VIEWPORT_RANGE = 200 // How far up/down players can see
-const BONUS_TIME_LIMIT = 30 // Time limit in seconds to get bonus points for reaching the top
+const BONUS_TIME_LIMIT = 40 // Time limit in seconds to get bonus points for reaching the top
 
 interface MultiplayerGameProps {
     players: Player[]
