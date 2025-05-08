@@ -114,7 +114,13 @@ const cleanupDisconnectedPlayers = () => {
 app.prepare().then(() => {
     const httpServer = createServer(handler)
 
-    const io = new Server(httpServer)
+    const io = new Server(httpServer, {
+        cors: {
+            origin: ["https://math.raeveira.nl", "http://localhost:3000"],
+            methods: ["GET", "POST"],
+            credentials: true
+        }
+    })
 
     // Store io instance globally for cleanup function
     global.io = io
